@@ -1,9 +1,14 @@
 /**
  * Random Joke Generator
  * Fetches jokes from JokeAPI (https://jokeapi.dev/)
+ * Uses environment variables for secure configuration
  */
 
 const https = require('https');
+
+// Load environment variables safely
+const API_URL = process.env.JOKEAPI_URL || 'https://v2.jokeapi.dev';
+const API_TIMEOUT = parseInt(process.env.JOKEAPI_TIMEOUT || '5000', 10);
 
 /**
  * Fetch a random joke from JokeAPI
@@ -17,9 +22,10 @@ function getRandomJoke(options = {}) {
     const type = options.type || 'any';
     const category = options.category || 'Any';
     
-    const url = `https://v2.jokeapi.dev/joke/${category}?type=${type}`;
+    // Use environment variable for API URL
+    const url = `${API_URL}/joke/${category}?type=${type}`;
     
-    https.get(url, (res) => {
+    const request = https.get(url, (res) => {
       let data = '';
       
       res.on('data', (chunk) => {
@@ -41,6 +47,12 @@ function getRandomJoke(options = {}) {
       });
     }).on('error', (error) => {
       reject(new Error(`Failed to fetch joke: ${error.message}`));
+    });
+
+    // Set timeout for the request
+    request.setTimeout(API_TIMEOUT, () => {
+      request.destroy();
+      reject(new Error(`API request timeout after ${API_TIMEOUT}ms`));
     });
   });
 }
@@ -74,6 +86,7 @@ async function main() {
     displayJoke(joke);
   } catch (error) {
     console.error('Error:', error.message);
+    process.exit(1);
   }
 }
 
